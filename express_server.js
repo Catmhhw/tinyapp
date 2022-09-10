@@ -11,15 +11,26 @@ const urlDatabase = {
 
 app.use(express.urlencoded({ extended: true }));
 
+//POSTS - create
 app.post("/urls", (req, res) => {
   console.log(req.body); // Log the POST request body to the console
   const id = generateRandomString()
   urlDatabase[id] = req.body.longURL
-  res.redirect("/urls/"); // Respond with 'Ok' (we will replace this)
+  res.redirect("/urls");
+});
+
+app.post("/urls/:id/delete", (req, res) => {
+    delete urlDatabase[req.params.id]
+    res.redirect("/urls");
+});
+
+app.post("/urls/:id/edit", (req, res) => {
+  urlDatabase[req.params.id] = req.body.longURL
+  res.redirect("/urls");
 });
 
 
-//ROUTES
+//ROUTES - links
 app.get("/u/:id", (req, res) => {
   const longURL = urlDatabase[req.params.id]
   if (longURL) {
@@ -44,8 +55,6 @@ app.get("/urls/:id", (req, res) => {
 });
 
 
-
-
 //
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
@@ -64,7 +73,9 @@ function generateRandomString() {
 
 
 
-
+//req.body is attached to name
+//render paint page
+//redirect takes to other page
 
 
 // app.get("/", (req, res) => {
