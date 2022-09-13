@@ -94,6 +94,9 @@ app.post("/login", (req, res) => {
           res.cookie("username", userDatabase[key].username);
           res.redirect("/urls");
           return
+    } else {
+      res.redirect("/urls");
+      return
     }
   }
 });
