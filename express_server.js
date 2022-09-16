@@ -1,39 +1,34 @@
-const cookieParser = require('cookie-parser')
+const cookieParser = require('cookie-parser');
 const express = require("express");
 const app = express();
 const PORT = 8080; // default port 8080
 
 app.set("view engine", "ejs");
-app.use(cookieParser())
+app.use(cookieParser());
 
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
 };
 
-
-const userDatabase = {
-  1: {
-    username: "Cat",
-    name: "Catherine",
+const users = {
+  cat: {
+    userId: "cat",
     email: "example@email.com",
-    password: "testpass"
+    password: "test"
   },
 
-  2: {
-    username: "Vic",
-    name: "Victoria",
-    email: "example1@email.com",
-    password: "testpass"
+  vic: {
+    userId: "vic",
+    email: "test@email.com",
+    password: "tester"
   }
-
 };
 
 app.use(express.urlencoded({ extended: true }));
 
 
-
-//ROUTES - links
+/////// ROUTES - links
 app.get("/u/:id", (req, res) => {
   const longURL = urlDatabase[req.params.id]
   if (longURL) {
@@ -44,31 +39,43 @@ app.get("/u/:id", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-  const username = req.cookies["username"]
-  const templateVars = { urls: urlDatabase, username: username };
+  const userId = req.cookies["user_id"]
+  const user = users[userId]
+  const templateVars = { urls: urlDatabase, user};
   res.render("urls_index", templateVars);
 });
 
 app.get("/urls/new", (req, res) => {
-  const username = req.cookies["username"]
-  const templateVars = { urls: urlDatabase, username: username };
+  const userId = req.cookies["user_id"]
+  const user = users[userId]
+  const templateVars = { urls: urlDatabase, user};
   res.render("urls_new", templateVars);
 });
 
 app.get("/urls/:id", (req, res) => {
-  const username = req.cookies["username"]
-  const templateVars = { id: req.params.id, longURL: urlDatabase[req.params.id], username: username};
+  const userId = req.cookies["user_id"]
+  const user = users[userId]
+  const templateVars = { id: req.params.id, longURL: urlDatabase[req.params.id], user};
   res.render("urls_show", templateVars);
 });
 
-// app.get("/login", (req, res) => {
-//   res.cookie("user_id", "user_name")
-//   req.send("test")
-// })
+app.get("/register", (req, res) => {
+  const userId = req.cookies["user_id"];
+  const user = users[userId];
+  const templateVars = {urls: urlDatabase, user};
+  res.render("user_registration", templateVars);
+})
+
+app.get("/login", (req, res) => {
+  const userId = req.cookies["user_id"];
+  const user = users[userId];
+  const templateVars = {urls: urlDatabase, user };
+  res.render("user_login", templateVars);
+})
 
 
 
-//POST
+/////// POST
 app.post("/urls", (req, res) => {
   console.log(req.body); // Log the POST request body to the console
   const id = generateRandomString();
@@ -88,26 +95,60 @@ res.redirect("/urls");
 
 app.post("/login", (req, res) => {
   console.log(req.body);
-  const idFromForm = req.body.username;
-  for(let key in userDatabase) {
-    if(userDatabase[key].username === idFromForm) {
-          res.cookie("username", userDatabase[key].username);
+  const { email, password } = req.body;
+  if (email === "" && password === "") {
+    return res.status(400).send("ERROR 400")
+  }
+  console.log(email, password)
+  for (let key in users) {
+    if (users[key].email === email) {
+      if (users[key].password === password) {
+          res.cookie("user_id", users[key].userId);
           res.redirect("/urls");
-          return
-    } else {
-      res.redirect("/urls");
-      return
+          return;
+      } else {
+        return res.status(403).send("Credentials do not match. Please try again.")
+      }
     }
   }
+  return res.status(403).send("ERROR 403: email cannot be found")
 });
 
 app.post("/logout", (req, res) => {
-  res.clearCookie("username")
-  res.redirect("/urls");
+  res.clearCookie("user_id");
+  res.redirect("/register");
 });
 
+app.post("/register", (req, res) => {
+  const { email, password } = req.body;
+  if (email === "" && password === "") {
+    return res.status(400).send("ERROR 400")
+  }
+  for (const key in users) {
+    if (Object.hasOwnProperty.call(users, key)) {
+      const dbUser = users[key];
+      console.log('dbUser:', dbUser)
+      if (dbUser.email === email) {
+        return res.status(400).send("Email is already taken");
+      }
+    }
+  }
 
+  const id = generateRandomString();
+  const user = {
+      userId: id,
+      email,
+      password
+  }
+//... : spreads out the object, makes it one level less  ==> users = {...users, user}
+  users[id] = user;
+  console.log("USERS:", users)
+  res.cookie("user_id", id);
+  console.log("USERID:", user);
+  res.redirect("/urls");
+})
 
+//validation, read, check, add, respond
 
 
 //LISTEN
