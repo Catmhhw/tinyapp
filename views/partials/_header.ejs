@@ -21,17 +21,16 @@
 
         
 
-          <% if(username){ %>
-            <label> Logged in as: <b><%= username %>!</b></label>
+          <% if(user){ %>
+            <label> Logged in as: <b><%= user.email  %>!</b></label>
             <form action="/logout" method="post">
               <button type="submit" class="btn btn-outline-dark">Logout</button>
             </form>
           <% } else { %>
-            <form action="/login" method="post">
-            <input  type="text" placeholder="Username" name="username" required>
-              <button  type="submit" class="btn btn-outline-dark">Login</button>
-            </form>
+            <a class="nav-item nav-link" href="/login">Login</a>
+            <a class="nav-item nav-link" href="/register">Register</a>
           <% } %>
+
 
 
 
