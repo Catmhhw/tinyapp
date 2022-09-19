@@ -7,99 +7,200 @@ app.set("view engine", "ejs");
 app.use(cookieParser());
 
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  b6UTxQ: {
+    longURL: "https://www.tsn.ca",
+    userID: "aJ48lW"
+  },
+  i3BoGr: {
+    longURL: "https://www.google.ca",
+    userID: "aJ48lW"
+  },
+  a1b2c3: {
+    longURL: "https://www.instagram.com",
+    userID: "klbcw7"
+  }
 };
 
 const users = {
-  cat: {
-    userId: "cat",
+  aJ48lW: {
+    userId: "aJ48lW",
     email: "example@email.com",
     password: "test"
   },
-
-  vic: {
-    userId: "vic",
+  klbcw7: {
+    userId: "klbcw7",
     email: "test@email.com",
-    password: "tester"
+    password: "test"
   }
 };
 
 app.use(express.urlencoded({ extended: true }));
 
+///////////////////////////////////////////////////////////
+///////////////////////// ROUTES - links
+///////////////////////////////////////////////////////////
 
-/////// ROUTES - links
 app.get("/u/:id", (req, res) => {
-  const longURL = urlDatabase[req.params.id]
+  const id = req.params.id
+  const longURL = urlDatabase[id].longURL;
+
   if (longURL) {
     res.redirect(longURL);
-  } else {
-    return res.send("ERROR 404: PAGE NOT FOUND");
+    return;
   }
+    return res.send("ERROR 404: PAGE NOT FOUND");
 });
 
 app.get("/urls", (req, res) => {
-  const userId = req.cookies["user_id"]
-  const user = users[userId]
-  const templateVars = { urls: urlDatabase, user};
-  res.render("urls_index", templateVars);
+  const userId = req.cookies["user_id"];
+  const user = users[userId];
+  const userURLS = urlsForUser(userId, urlDatabase)
+  
+  if (!user) {
+    return res.send("Please login or register")
+  }
+
+  if (user) {
+    const templateVars = { urls: userURLS, user};
+    res.render("urls_index", templateVars);
+  } 
 });
+
 
 app.get("/urls/new", (req, res) => {
   const userId = req.cookies["user_id"]
   const user = users[userId]
   const templateVars = { urls: urlDatabase, user};
+
+  if (!user) {
+    return res.redirect("/login");
+  }
+
   res.render("urls_new", templateVars);
 });
 
+
 app.get("/urls/:id", (req, res) => {
   const userId = req.cookies["user_id"]
+  const userID = urlDatabase[req.params.id].userID
   const user = users[userId]
-  const templateVars = { id: req.params.id, longURL: urlDatabase[req.params.id], user};
+  const longURL = urlDatabase[req.params.id].longURL
+  const templateVars = { id: req.params.id, urls: urlDatabase, user, longURL};
+
+  if (!user) {
+    return res.send("Please login or register")
+  }
+
+  if (userId !== userID) {
+    res.status(403).send('NO ACCESS');
+  }
+
   res.render("urls_show", templateVars);
 });
+
 
 app.get("/register", (req, res) => {
   const userId = req.cookies["user_id"];
   const user = users[userId];
-  const templateVars = {urls: urlDatabase, user};
-  res.render("user_registration", templateVars);
+  if (user) {
+   return res.redirect("/urls");
+  }
+  res.render("user_registration");
 })
+
 
 app.get("/login", (req, res) => {
   const userId = req.cookies["user_id"];
   const user = users[userId];
-  const templateVars = {urls: urlDatabase, user };
+  const templateVars = {urls: urlDatabase, user }
+  if (user) {
+   return res.redirect("/urls");
+  }
   res.render("user_login", templateVars);
 })
 
+///////////////////////////////////////////////////////////
+///////////////////////// POST
+///////////////////////////////////////////////////////////
 
-
-/////// POST
 app.post("/urls", (req, res) => {
-  console.log(req.body); // Log the POST request body to the console
+  const userID = req.cookies["user_id"];
+  // const user = users[userId]
   const id = generateRandomString();
-  urlDatabase[id] = req.body.longURL;
-  res.redirect("/urls/"); // Respond with 'Ok' (we will replace this)
+  const longURL = req.body.longURL
+  const url = { userID, longURL}
+
+  urlDatabase[id] = url
+
+  // if (!user) {
+  //   return res.send("User is not Logged in.");
+  // }
+ 
+   console.log(req.body);
+ 
+  // urlDatabase[id] = {
+  //     longURL: req.body.longURL,
+  //     userID: user
+  //   }
+
+  res.redirect("/urls");
 });
 
+app.post("/urls/:id", (req, res) => {
+  const userId = req.cookies["user_id"];
+  const user = users[userId]
+  const userID = urlDatabase[req.params.id].userID
+  if (!user) {
+    return res.status(403).send("Please login or register")
+  }
+  if (userId !== userID) {
+    return res.status(403).send("NO ACCESS. Not owner.");
+  }
+  res.redirect("/urls");
+});
+
+//DELETE
 app.post("/urls/:id/delete", (req, res) => {
+  const userId = req.cookies["user_id"]
+  const user = users[userId]
+  const userID = urlDatabase[req.params.id].userID
+  // const shortURL = req.params.id
+
+  if (!user) {
+    return res.status(403).send("Please login or register")
+  }
+  if (userId !== userID) {
+    return res.status(403).send("You do not have have access to this short URL.")
+  }
+
   delete urlDatabase[req.params.id];
   res.redirect("/urls");
 });
 
+//EDIT
 app.post("/urls/:id/edit", (req, res) => {
-urlDatabase[req.params.id] = req.body.longURL;
-res.redirect("/urls");
+  const userId = req.cookies["user_id"]
+  const user = users[userId]
+  urlDatabase[req.params.id].longURL = req.body.longURL;
+
+  if (!user) {
+    return res.status(403).send("Please login or register")
+  }
+  if (userId !== userID) {
+    return res.status(403).send("You do not have have access to this short URL.")
+  }
+
+  res.redirect("/urls");
 });
 
+//LOGIN
 app.post("/login", (req, res) => {
   console.log(req.body);
   const { email, password } = req.body;
   if (email === "" && password === "") {
     return res.status(400).send("ERROR 400")
   }
-  console.log(email, password)
+  console.log(email, password);
   for (let key in users) {
     if (users[key].email === email) {
       if (users[key].password === password) {
@@ -107,23 +208,27 @@ app.post("/login", (req, res) => {
           res.redirect("/urls");
           return;
       } else {
-        return res.status(403).send("Credentials do not match. Please try again.")
+        return res.status(403).send("Credentials do not match. Please try again.");
       }
     }
   }
-  return res.status(403).send("ERROR 403: email cannot be found")
+  return res.status(403).send("ERROR 403: email cannot be found.");
 });
 
+//LOGOUT
 app.post("/logout", (req, res) => {
   res.clearCookie("user_id");
-  res.redirect("/register");
+  res.redirect("/login");
 });
 
+//REGISTER
 app.post("/register", (req, res) => {
   const { email, password } = req.body;
+
   if (email === "" && password === "") {
-    return res.status(400).send("ERROR 400")
+    return res.status(400).send("Please enter Details.");
   }
+
   for (const key in users) {
     if (Object.hasOwnProperty.call(users, key)) {
       const dbUser = users[key];
@@ -135,20 +240,17 @@ app.post("/register", (req, res) => {
   }
 
   const id = generateRandomString();
+  
   const user = {
       userId: id,
       email,
       password
   }
-//... : spreads out the object, makes it one level less  ==> users = {...users, user}
-  users[id] = user;
-  console.log("USERS:", users)
-  res.cookie("user_id", id);
-  console.log("USERID:", user);
-  res.redirect("/urls");
-})
 
-//validation, read, check, add, respond
+  users[id] = user;
+  res.cookie("user_id", id);
+  res.redirect("/urls");
+});
 
 
 //LISTEN
@@ -156,6 +258,9 @@ app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
 
+///////////////////////////////////////////////////////////
+///////////////////////// FUNCTIONS
+///////////////////////////////////////////////////////////
 
 // generates a 6 character random string
 function generateRandomString() {
@@ -167,21 +272,18 @@ function generateRandomString() {
     return randomString;
 }
 
+function urlsForUser(id, urlDatabase) {
+  let userURL = {}
+  for (const shortURL in urlDatabase) {
+    if (urlDatabase[shortURL].userID === id) {
+      userURL[shortURL] = urlDatabase[shortURL]
+    }
+  }
+  return userURL
+}
 
-
+//... : spreads out the object, makes it one level less  ==> users = {...users, user}
+//validation, read, check, add, respond
 //req.body is attached to name
 //render paint page
 //redirect takes to other page
-
-
-// app.get("/", (req, res) => {
-//     res.send("Hello!");
-//   });
-
-// app.get("/urls.json", (req, res) => {
-//   res.json(urlDatabase);
-// });
-
-// app.get("/hello", (req, res) => {
-//   res.send("<html><body>Hello <b>World</b></body></html>\n");
-// });
