@@ -1,5 +1,6 @@
 const cookieParser = require('cookie-parser');
 const express = require("express");
+const bcrypt = require("bcryptjs");
 const app = express();
 const PORT = 8080; // default port 8080
 
@@ -9,28 +10,28 @@ app.use(cookieParser());
 const urlDatabase = {
   b6UTxQ: {
     longURL: "https://www.tsn.ca",
-    userID: "aJ48lW"
+    userID: "Ii5taG"
   },
   i3BoGr: {
     longURL: "https://www.google.ca",
-    userID: "aJ48lW"
+    userID: "Ii5taG"
   },
   a1b2c3: {
     longURL: "https://www.instagram.com",
-    userID: "klbcw7"
+    userID: "OZqQjT"
   }
 };
 
 const users = {
-  aJ48lW: {
-    userId: "aJ48lW",
+  Ii5taG: {
+    userId: "Ii5taG",
     email: "example@email.com",
-    password: "test"
+    password: "$2a$10$Eky1dPTH.QZaDHIakhj6nuV5FzCVtnFVATy9jN3g08IPQ/jT89OXi" //test
   },
-  klbcw7: {
-    userId: "klbcw7",
+  OZqQjT: {
+    userId: "OZqQjT",
     email: "test@email.com",
-    password: "test"
+    password: "$2a$10$.gafH2xTVaA5mgfvgJBcne8tNYBjnav5aNg6s2jkCU5e4m.MYenBa" //test
   }
 };
 
@@ -102,10 +103,14 @@ app.get("/urls/:id", (req, res) => {
 app.get("/register", (req, res) => {
   const userId = req.cookies["user_id"];
   const user = users[userId];
+  const { email, password } = req.body
+
   if (user) {
    return res.redirect("/urls");
   }
-  res.render("user_registration");
+
+  const templateVars = {urls: urlDatabase, user, email, password}
+  res.render("user_registration", templateVars);
 })
 
 
@@ -182,6 +187,7 @@ app.post("/urls/:id/edit", (req, res) => {
   const userId = req.cookies["user_id"]
   const user = users[userId]
   urlDatabase[req.params.id].longURL = req.body.longURL;
+  const userID = urlDatabase[req.params.id].userID
 
   if (!user) {
     return res.status(403).send("Please login or register")
@@ -195,15 +201,16 @@ app.post("/urls/:id/edit", (req, res) => {
 
 //LOGIN
 app.post("/login", (req, res) => {
-  console.log(req.body);
   const { email, password } = req.body;
+
   if (email === "" && password === "") {
     return res.status(400).send("ERROR 400")
   }
+
   console.log(email, password);
   for (let key in users) {
     if (users[key].email === email) {
-      if (users[key].password === password) {
+      if (bcrypt.compareSync(password , users[key].password)) {
           res.cookie("user_id", users[key].userId);
           res.redirect("/urls");
           return;
@@ -212,7 +219,7 @@ app.post("/login", (req, res) => {
       }
     }
   }
-  return res.status(403).send("ERROR 403: email cannot be found.");
+  return res.status(403).send("Email cannot be found.");
 });
 
 //LOGOUT
@@ -240,14 +247,17 @@ app.post("/register", (req, res) => {
   }
 
   const id = generateRandomString();
-  
+  const hashedPassword = bcrypt.hashSync(password, 10);
+
   const user = {
       userId: id,
       email,
-      password
+      password: hashedPassword
   }
 
   users[id] = user;
+  console.log(user)
+  console.log(users[id])
   res.cookie("user_id", id);
   res.redirect("/urls");
 });
