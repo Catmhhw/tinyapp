@@ -59,20 +59,6 @@ app.get("/", (req, res) => {
   res.redirect("/urls")
 })
 
-app.get("/u/:id", (req, res) => {
-  const id = req.params.id
-  console.log("urlDatabase: ",urlDatabase);
-  console.log("ID: ", id)
-  console.log("record:", urlDatabase[id])
-  let record = urlDatabase[id]
-
-  if (record && record.longURL !== undefined) {
-    res.redirect(record.longURL);
-    return;
-  }
-
-    return res.send("ERROR 404: PAGE NOT FOUND");
-});
 
 app.get("/urls", (req, res) => {
   const userId = req.session.user_id;
@@ -88,7 +74,6 @@ app.get("/urls", (req, res) => {
     res.render("urls_index", templateVars);
   } 
 });
-
 
 app.get("/urls/new", (req, res) => {
   const userId = req.session.user_id;
@@ -119,6 +104,19 @@ app.get("/urls/:id", (req, res) => {
   }
 
   res.render("urls_show", templateVars);
+});
+
+
+app.get("/u/:id", (req, res) => {
+  const id = req.params.id
+  let record = urlDatabase[id]
+
+  if (record && record.longURL !== undefined) {
+    res.redirect(record.longURL);
+    return;
+  }
+
+    return res.send("ERROR 404: PAGE NOT FOUND");
 });
 
 
@@ -162,7 +160,7 @@ app.post("/urls", (req, res) => {
   urlDatabase[id] = url
 
   if (!user) {
-    return res.send("User is not Logged in.");
+    return res.status(403).send("Please login or register.");
   }
 
   res.redirect("/urls");
